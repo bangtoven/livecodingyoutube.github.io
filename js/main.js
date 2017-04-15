@@ -27,6 +27,9 @@ var YTSTATE_VIDEOCUED = 5;
 
 function onYouTubeIframeAPIReady() {
   if(DEBUG)console.log("is ready");
+
+  create(1,1,"Mh4f9AYRCZY");
+  setQ(all, 'hd720');
 }
 
 function onPlayerReady(event) {
@@ -68,6 +71,8 @@ function setMark(){
 
 // run the function when the document is ready
 $(document).ready(function () {
+  connectOSC();
+  
   var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
         lineNumbers: false,
         styleActiveLine: true,
@@ -359,6 +364,7 @@ function search(query) {
 
 	$.getJSON(url, params, function (query) {
 		searchResult = query.items
+    var count = 0;
 		searchResult.forEach(function(entry) {
 		  if(DEBUG)console.log(entry.snippet.title); // 화면에 출력해보려고 했는데, codemirror에 output은 어떻게 하는지 잘 모르겠네요.
 	    console.log(entry.snippet.title); // 화면에 출력해보려고 했는데, codemirror에 output은 어떻게 하는지 잘 모르겠네요.
@@ -367,8 +373,8 @@ function search(query) {
 			thumburl =  entry.snippet.thumbnails.default.url;
 			thumbimg = '<img class="thumb-img" src="'+thumburl+'">';
 
-			$('#youtube-result').append('<div class = "thumb" id="yt-r-' +entry.id.videoId+ '" yt-id="' +entry.id.videoId+ '"><div>' + thumbimg +'</div><div class = "thumb-title" >'+ title + '</div>');
-
+			$('#youtube-result').append('<div class = "thumb" id="yt-r-' +entry.id.videoId+ '" yt-id="' +entry.id.videoId+ '"><div>' + thumbimg +'</div><div class = "thumb-title" >'+ count+'] '+title + '</div>');
+      count++;
         // $("#youtube-result").append(entry.snippet.title + ",<span id=yt-r-" +entry.id.videoId+ " yt-id=" +entry.id.videoId+ ">" + entry.id.videoId + "</span><br>")
       $("#yt-r-" +entry.id.videoId).click(function(){
         updateCodeMirror("\"" + entry.id.videoId + "\"");
@@ -848,3 +854,92 @@ function help() {
  */
 function _howToSelectVideos() {
 }
+
+
+var ip = 'localhost';
+var port = '1234';
+
+var globalLat, globalLon; // temp vars for testing
+
+// attempt a local socket connection
+function connectOSC() {
+  
+    try {
+    var socket = new WebSocket("ws://" + ip + ":" + port); 
+
+
+      console.log('<p class="event">Socket Status: '+socket.readyState);  
+
+          socket.onopen = function(){  
+               console.log('<p class="event">Socket Status: '+socket.readyState+' (open)');  
+          }  
+
+          socket.onmessage = function(msg){  
+              console.log('<p class="message">Received: '+msg.data);
+        parseOSCMessage(msg.data);
+          }  
+
+          socket.onclose = function(){  
+               console.debug('<p class="event">Socket Status: '+socket.readyState+' (Closed)');  
+          }             
+
+      } catch(exception){  
+           console.log('<p>Error'+exception);  
+      }
+
+   // socket.send("hsdfhjkjshd"); 
+  
+}
+
+function select(videoIndex, resultIndex) {
+  var id = searchResult[resultIndex].id.videoId;
+  cue(videoIndex, id)
+  $("#youtube-result").hide();
+  return;
+}
+
+
+// var token, cmd;
+//////////////////////////////////////
+// handles incoming websockets messages
+function parseOSCMessage(msg) {
+  
+  if((msg == null) || (msg == "")) 
+    return;
+  
+  var parsed = msg.split("/");
+  var func = parsed[1];
+  if ((func == null) || (func == "")) 
+    return;
+
+  // var params;
+  // if(parsed[2]!=null)
+  //   params = JSON.parse(parsed[2]);
+  var params;
+  if(parsed[2]!=null)
+    params = parsed[2].replace('[','(').replace(']',')');
+  else
+    params = "()";
+
+  var command = func + params;
+  eval(command);
+  
+  // token = msg.split("||"); // split into tokens: command + data, data...
+  
+  // cmd = token[0].split("/");  // split out command: point lat lon
+  // if(cmd[1] == "search") {
+  //   search(token[1]);
+  //   return;
+  // } else if(cmd[1] == "select") {
+    // var i = parseInt(token[1]);
+    // var id = searchResult[i].id.videoId;
+    // create(1,1,id);
+    // return;
+  // } else if(cmd[1] == "play") {
+  //   play(0)
+  // } else if(cmd[1] == "pause") {
+  //   pause(0)
+  // }
+  // lat = parseFloat(token[1]);
+  
+} 
