@@ -28,8 +28,8 @@ var YTSTATE_VIDEOCUED = 5;
 function onYouTubeIframeAPIReady() {
   if(DEBUG)console.log("is ready");
 
-  create(1,1,"Mh4f9AYRCZY");
-  setQ(all, 'hd720');
+  // create(1,1,"Mh4f9AYRCZY");
+  // setQ(all, 'hd720');
 }
 
 function onPlayerReady(event) {
@@ -354,7 +354,7 @@ function search(query) {
 	url = 'https://www.googleapis.com/youtube/v3/search';
 	var params = {
 		part: 'snippet',
-		key: 'AIzaSyDAKDaBy_JDwcScSHqDQimOOLjdPImLanc', // github gist에서 본 api_token 이라서 새로 하나 받아야 할 것 같아요.
+		key: 'AIzaSyAgVwWjfP1LJ7lV1OacY_5OaHXPEe4As68', // github gist에서 본 api_token 이라서 새로 하나 받아야 할 것 같아요.
 		q: query,
 		type: "video",
     maxResults: 20,
@@ -427,6 +427,7 @@ function mute(list, mute) {
 function volume(list,vol) {
   var selectedVideos =  selectVideos(list);
   selectedVideos.forEach(function(video){
+    video.originalVolume = vol;
     video.setVolume(vol);
   });
 }
@@ -893,9 +894,52 @@ function connectOSC() {
 
 function select(videoIndex, resultIndex) {
   var id = searchResult[resultIndex].id.videoId;
-  cue(videoIndex, id)
+  if (videoIndex < targetVideos.length) {
+    cue(videoIndex, id)
+  } else if (targetVideos.length == 0){
+    create(1,1,id);
+  } else {
+    add(1,0, id);
+  }
   $("#youtube-result").hide();
   return;
+}
+
+function solo(video) {
+  volume(all, 0);
+  volume(video, 100);
+}
+
+function trigger(id, timepoint, duration) {
+	var volumeControl = true;
+	var video =  selectVideos(id)[0];	
+  	video.seekTo(timepoint);
+  	
+  	if (video.timeout) {
+  		clearTimeout(video.timeout);
+  	}
+  	if (volumeControl) {
+  		video.playVideo();
+      var volume;
+      if (video.originalVolume == null) {
+        volume = video.getVolume();
+        video.originalVolume = volume;
+      } else {
+        volume = video.originalVolume;
+      }
+      video.setVolume(volume);
+  	} else {
+  		video.playVideo();
+  	}
+
+  	video.timeout = setTimeout(function() {
+		if (volumeControl) {
+      video.originalVolume = video.getVolume();
+			video.setVolume(0);
+		} else {
+			video.pauseVideo();
+		}
+  	}, duration);
 }
 
 
